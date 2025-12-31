@@ -20,7 +20,8 @@ dependencies = [
     "alembic (>=1.17.2,<2.0.0)",
     "bcrypt (==4.0.1)",
     "fastapi-mail (>=1.6.1,<2.0.0)",
-    "websockets (>=15.0.1,<16.0.0)"
+    "websockets (>=15.0.1,<16.0.0)",
+    "redis[asyncio] (>=7.1.0,<8.0.0)"
 ]
 
 [tool.poetry]

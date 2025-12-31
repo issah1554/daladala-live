@@ -1,6 +1,9 @@
 # daladala_live/vehicles/ws.py
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Dict, List
+from daladala_live.core.redis import redis_client
+import json
+import asyncio
 
 router = APIRouter(prefix="/ws", tags=["vehicles"])
 
@@ -35,6 +38,10 @@ async def vehicle_locations(websocket: WebSocket):
         while True:
             data = await websocket.receive_json()
             # Example data: {"vehicle_id": "EL25G74vBuE", "lat": -6.8, "lng": 39.3}
+            # Publish the data to Redis
+            await redis_client.publish("vehicle_locations", json.dumps(data))
+            await redis_client.rpush("vehicle_locations_history", json.dumps(data))
+            await redis_client.expire("vehicle_locations_history", 60 * 60)  # 1 hour expiry
             await manager.broadcast(data)
     except WebSocketDisconnect:
         manager.disconnect(websocket)

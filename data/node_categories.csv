@@ -1,0 +1,14 @@
+id,type,category,description
+1,venue,library,"Places to read, borrow books, or study"
+2,venue,lab,Research or computer laboratories
+3,venue,office,Administrative or faculty offices
+4,venue,classroom,Rooms where teaching happens
+5,venue,cafeteria,Places where food is served
+6,venue,hall,Large lecture halls or event spaces
+7,venue,hostel,Student dormitories or residence buildings
+8,venue,toilet,Restroom facilities
+10,venue,shop,"Bookshop, stationery or supply stores"
+11,junction,,Path intersections or route connectors
+12,gate,,Entry/exit points to the campus
+13,rest,,Rest areas or informal seating spots
+14,road-crossing,,External pedestrian crossings
