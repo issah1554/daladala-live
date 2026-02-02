@@ -1,7 +1,8 @@
 import math
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from daladala_live.auth.dependencies import get_current_active_user
 from .schemas import (
     VehicleCreate,
     VehicleUpdate,
@@ -30,7 +31,11 @@ from .service import (
     remove_user_from_vehicle,
 )
 
-router = APIRouter(prefix="/volta/api/vehicles", tags=["vehicles"])
+router = APIRouter(
+    prefix="/volta/api/vehicles",
+    tags=["vehicles"],
+    dependencies=[Depends(get_current_active_user)],
+)
 
     
 # ===== Vehicle Endpoints =====

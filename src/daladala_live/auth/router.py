@@ -3,13 +3,18 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 
-from daladala_live.auth.dependencies import get_current_user, get_current_active_user
+from daladala_live.auth.dependencies import (
+    get_current_active_user,
+    get_current_user,
+    oauth2_scheme,
+)
 from daladala_live.core.security import (
     verify_password,
     create_access_token,
     create_refresh_token,
     create_password_reset_token,
     create_email_verification_token,
+    revoke_access_token,
     verify_refresh_token,
     verify_password_reset_token,
     verify_email_verification_token,
@@ -157,6 +162,7 @@ async def refresh_access_token(payload: RefreshTokenRequest):
 
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
+    token: Annotated[str, Depends(oauth2_scheme)],
     current_user: Annotated[dict, Depends(get_current_user)],  # noqa: ARG001
 ):
     """
@@ -164,7 +170,7 @@ async def logout(
     Note: In a stateless JWT system, the client should discard the tokens.
     For enhanced security, implement token blacklisting with Redis.
     """
-    # In production, you would blacklist the token using current_user.public_id
+    revoke_access_token(token)
     del current_user  # Explicitly mark as intentionally unused
     return MessageResponse(message="Successfully logged out")
 

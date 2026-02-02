@@ -1,7 +1,8 @@
 import math
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from daladala_live.auth.dependencies import get_current_active_user
 from .schemas import (
     RouteCreate,
     RouteListOut,
@@ -28,7 +29,11 @@ from .service import (
     update_route_node,
 )
 
-router = APIRouter(prefix="/volta/api/routes", tags=["routes"])
+router = APIRouter(
+    prefix="/volta/api/routes",
+    tags=["routes"],
+    dependencies=[Depends(get_current_active_user)],
+)
 
 
 @router.get("", response_model=RouteListOut)

@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from enum import Enum
 
@@ -27,6 +27,8 @@ pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto",
 )
+
+_revoked_access_tokens: dict[str, float] = {}
 
 
 # ===== Password Hashing =====
@@ -120,6 +122,8 @@ def verify_token(token: str, expected_type: TokenType) -> Optional[str]:
 
 def verify_access_token(token: str) -> Optional[str]:
     """Verify an access token. Returns user_id if valid."""
+    if is_access_token_revoked(token):
+        return None
     return verify_token(token, TokenType.ACCESS)
 
 
@@ -144,3 +148,28 @@ def verify_email_verification_token(token: str) -> Optional[str]:
 def generate_random_token(length: int = 32) -> str:
     """Generate a random URL-safe token."""
     return secrets.token_urlsafe(length)
+
+
+def revoke_access_token(token: str) -> bool:
+    payload = decode_token(token)
+    if not payload or payload.get("type") != TokenType.ACCESS.value:
+        return False
+
+    exp = payload.get("exp")
+    if exp is None:
+        return False
+
+    _revoked_access_tokens[token] = float(exp)
+    return True
+
+
+def is_access_token_revoked(token: str) -> bool:
+    _cleanup_revoked_tokens()
+    return token in _revoked_access_tokens
+
+
+def _cleanup_revoked_tokens() -> None:
+    now_ts = datetime.now(timezone.utc).timestamp()
+    expired = [tok for tok, exp in _revoked_access_tokens.items() if exp <= now_ts]
+    for tok in expired:
+        _revoked_access_tokens.pop(tok, None)
