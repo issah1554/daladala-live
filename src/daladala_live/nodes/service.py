@@ -81,3 +81,18 @@ async def delete_node(node_id: int):
     query = delete(Node.__table__).where(Node.id == node_id)
     await database.execute(query)
     return {"deleted": node_id}
+
+
+async def delete_nodes(node_ids: list[int]):
+    query = select(Node.id).where(Node.id.in_(node_ids))
+    rows = await database.fetch_all(query)
+    existing_ids = {row["id"] for row in rows}
+
+    if existing_ids:
+        delete_query = delete(Node.__table__).where(Node.id.in_(existing_ids))
+        await database.execute(delete_query)
+
+    deleted = [node_id for node_id in node_ids if node_id in existing_ids]
+    missing = [node_id for node_id in node_ids if node_id not in existing_ids]
+
+    return {"deleted": deleted, "missing": missing, "count": len(deleted)}

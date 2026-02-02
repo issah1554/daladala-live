@@ -52,3 +52,13 @@ class NodeListOut(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class NodeBulkDeleteRequest(BaseModel):
+    ids: list[int] = Field(..., min_length=1)
+
+
+class NodeBulkDeleteOut(BaseModel):
+    deleted: list[int]
+    missing: list[int]
+    count: int

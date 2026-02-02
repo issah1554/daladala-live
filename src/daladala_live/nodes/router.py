@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException, Query
 
 from .schemas import (
     NodeCreate,
+    NodeBulkDeleteOut,
+    NodeBulkDeleteRequest,
     NodeListOut,
     NodeOut,
     NodeStatus,
@@ -14,6 +16,7 @@ from .schemas import (
 from .service import (
     create_node,
     delete_node,
+    delete_nodes,
     get_node_by_id,
     get_nodes,
     get_nodes_count,
@@ -105,3 +108,9 @@ async def remove_node(node_id: int):
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
     return await delete_node(node_id)
+
+
+@router.delete("", response_model=NodeBulkDeleteOut)
+async def remove_nodes(payload: NodeBulkDeleteRequest):
+    result = await delete_nodes(payload.ids)
+    return result
