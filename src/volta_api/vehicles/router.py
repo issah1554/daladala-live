@@ -3,15 +3,13 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from volta_api.auth.dependencies import get_current_active_user
+from volta_api.core.api_response import ApiResponse, PaginationMeta, success_response
 from .schemas import (
     VehicleCreate,
     VehicleUpdate,
-    VehicleOut,
-    VehicleListOut,
     VehicleStatus,
     VehicleUserCreate,
     VehicleUserUpdate,
-    VehicleUserOut,
     VehicleDeleteConfirm,
 )
 from .service import (
@@ -42,7 +40,7 @@ router = APIRouter(
 # ===== Vehicle Endpoints =====
 
 
-@router.post("", response_model=VehicleOut, status_code=201)
+@router.post("", response_model=ApiResponse, response_model_exclude_none=True, status_code=201)
 async def register_vehicle(payload: VehicleCreate):
     """Create a new vehicle."""
     # Check for duplicate plate number
@@ -54,10 +52,10 @@ async def register_vehicle(payload: VehicleCreate):
         )
 
     vehicle = await create_vehicle(payload.model_dump())
-    return vehicle
+    return success_response(message="Vehicle created", data=vehicle)
 
 
-@router.get("", response_model=VehicleListOut)
+@router.get("", response_model=ApiResponse, response_model_exclude_none=True)
 async def list_vehicles(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
@@ -87,16 +85,16 @@ async def list_vehicles(
 
     total_pages = math.ceil(total / page_size) if total > 0 else 1
 
-    return VehicleListOut(
-        items=vehicles,
+    meta = PaginationMeta(
         total=total,
         page=page,
         page_size=page_size,
         total_pages=total_pages,
     )
+    return success_response(data=vehicles, meta=meta)
 
 
-@router.get("/search", response_model=list[VehicleOut])
+@router.get("/search", response_model=ApiResponse, response_model_exclude_none=True)
 async def search_vehicles_endpoint(
     q: str = Query(..., min_length=1, description="Search term"),
     page: int = Query(1, ge=1),
@@ -105,28 +103,36 @@ async def search_vehicles_endpoint(
     """Search vehicles by plate number or type."""
     skip = (page - 1) * page_size
     vehicles = await search_vehicles(search_term=q, skip=skip, limit=page_size)
-    return vehicles
+    total = len(vehicles)
+    total_pages = math.ceil(total / page_size) if total > 0 else 1
+    meta = PaginationMeta(
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
+    return success_response(data=vehicles, meta=meta)
 
 
-@router.get("/plate/{plate_number}", response_model=VehicleOut)
+@router.get("/plate/{plate_number}", response_model=ApiResponse, response_model_exclude_none=True)
 async def read_vehicle_by_plate(plate_number: str):
     """Get a vehicle by its plate number."""
     vehicle = await get_vehicle_by_plate_number(plate_number)
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
-    return vehicle
+    return success_response(data=vehicle)
 
 
-@router.get("/{vehicle_id}", response_model=VehicleOut)
+@router.get("/{vehicle_id}", response_model=ApiResponse, response_model_exclude_none=True)
 async def read_vehicle(vehicle_id: int):
     """Get a vehicle by ID."""
     vehicle = await get_vehicle_by_id(vehicle_id)
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
-    return vehicle
+    return success_response(data=vehicle)
 
 
-@router.put("/{vehicle_id}", response_model=VehicleOut)
+@router.put("/{vehicle_id}", response_model=ApiResponse, response_model_exclude_none=True)
 async def edit_vehicle(vehicle_id: int, payload: VehicleUpdate):
     """Update a vehicle."""
     vehicle = await get_vehicle_by_id(vehicle_id)
@@ -148,10 +154,14 @@ async def edit_vehicle(vehicle_id: int, payload: VehicleUpdate):
         update_data["status"] = update_data["status"].value
 
     updated = await update_vehicle(vehicle_id, update_data)
-    return updated
+    return success_response(message="Vehicle updated", data=updated)
 
 
-@router.patch("/{vehicle_id}/location-sharing", response_model=VehicleOut)
+@router.patch(
+    "/{vehicle_id}/location-sharing",
+    response_model=ApiResponse,
+    response_model_exclude_none=True,
+)
 async def toggle_location_sharing(vehicle_id: int, is_sharing: bool):
     """Toggle location sharing for a vehicle."""
     vehicle = await get_vehicle_by_id(vehicle_id)
@@ -159,22 +169,28 @@ async def toggle_location_sharing(vehicle_id: int, is_sharing: bool):
         raise HTTPException(status_code=404, detail="Vehicle not found")
 
     updated = await update_vehicle_location_sharing(vehicle_id, is_sharing)
-    return updated
+    return success_response(message="Vehicle updated", data=updated)
 
 
-@router.delete("/{vehicle_id}")
+@router.delete("/{vehicle_id}", response_model=ApiResponse, response_model_exclude_none=True)
 async def remove_vehicle(vehicle_id: int, payload: VehicleDeleteConfirm):
     """Delete a vehicle."""
     vehicle = await get_vehicle_by_id(vehicle_id)
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
-    return await delete_vehicle(vehicle_id)
+    await delete_vehicle(vehicle_id)
+    return success_response(message="Vehicle deleted")
 
 
 # ===== VehicleUser Endpoints =====
 
 
-@router.post("/{vehicle_id}/users", response_model=VehicleUserOut, status_code=201)
+@router.post(
+    "/{vehicle_id}/users",
+    response_model=ApiResponse,
+    response_model_exclude_none=True,
+    status_code=201,
+)
 async def assign_user(vehicle_id: int, payload: VehicleUserCreate):
     """Assign a user to a vehicle with a specific role."""
     # Verify vehicle exists
@@ -196,10 +212,10 @@ async def assign_user(vehicle_id: int, payload: VehicleUserCreate):
         "role": payload.role.value,
     }
     assignment = await assign_user_to_vehicle(assignment_data)
-    return assignment
+    return success_response(message="User assigned to vehicle", data=assignment)
 
 
-@router.get("/{vehicle_id}/users", response_model=list[VehicleUserOut])
+@router.get("/{vehicle_id}/users", response_model=ApiResponse, response_model_exclude_none=True)
 async def list_vehicle_users(vehicle_id: int):
     """Get all users assigned to a vehicle."""
     vehicle = await get_vehicle_by_id(vehicle_id)
@@ -207,17 +223,35 @@ async def list_vehicle_users(vehicle_id: int):
         raise HTTPException(status_code=404, detail="Vehicle not found")
 
     users = await get_users_by_vehicle(vehicle_id)
-    return users
+    total = len(users)
+    meta = PaginationMeta(
+        total=total,
+        page=1,
+        page_size=total,
+        total_pages=1,
+    )
+    return success_response(data=users, meta=meta)
 
 
-@router.get("/users/{user_id}/vehicles", response_model=list[VehicleUserOut])
+@router.get("/users/{user_id}/vehicles", response_model=ApiResponse, response_model_exclude_none=True)
 async def list_user_vehicles(user_id: str):
     """Get all vehicles assigned to a user."""
     vehicles = await get_vehicles_by_user(user_id)
-    return vehicles
+    total = len(vehicles)
+    meta = PaginationMeta(
+        total=total,
+        page=1,
+        page_size=total,
+        total_pages=1,
+    )
+    return success_response(data=vehicles, meta=meta)
 
 
-@router.put("/{vehicle_id}/users/{user_id}", response_model=VehicleUserOut)
+@router.put(
+    "/{vehicle_id}/users/{user_id}",
+    response_model=ApiResponse,
+    response_model_exclude_none=True,
+)
 async def update_user_role(vehicle_id: int, user_id: str, payload: VehicleUserUpdate):
     """Update a user's role for a specific vehicle."""
     # Verify assignment exists
@@ -229,10 +263,14 @@ async def update_user_role(vehicle_id: int, user_id: str, payload: VehicleUserUp
         )
 
     updated = await update_vehicle_user_role(vehicle_id, user_id, payload.role.value)
-    return updated
+    return success_response(message="Vehicle user updated", data=updated)
 
 
-@router.delete("/{vehicle_id}/users/{user_id}")
+@router.delete(
+    "/{vehicle_id}/users/{user_id}",
+    response_model=ApiResponse,
+    response_model_exclude_none=True,
+)
 async def unassign_user(vehicle_id: int, user_id: str):
     """Remove a user assignment from a vehicle."""
     # Verify assignment exists
@@ -243,4 +281,5 @@ async def unassign_user(vehicle_id: int, user_id: str):
             detail="User is not assigned to this vehicle",
         )
 
-    return await remove_user_from_vehicle(vehicle_id, user_id)
+    await remove_user_from_vehicle(vehicle_id, user_id)
+    return success_response(message="User unassigned from vehicle")

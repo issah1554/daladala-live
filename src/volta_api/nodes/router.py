@@ -4,12 +4,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from volta_api.auth.dependencies import get_current_active_user
+from volta_api.core.api_response import ApiResponse, PaginationMeta, success_response
 from .schemas import (
     NodeCreate,
-    NodeBulkDeleteOut,
     NodeBulkDeleteRequest,
-    NodeListOut,
-    NodeOut,
     NodeStatus,
     NodeType,
     NodeUpdate,
@@ -32,13 +30,13 @@ router = APIRouter(
 )
 
 
-@router.post("", response_model=NodeOut, status_code=201)
+@router.post("", response_model=ApiResponse, response_model_exclude_none=True, status_code=201)
 async def register_node(payload: NodeCreate):
     node = await create_node(payload.model_dump())
-    return node
+    return success_response(message="Node created", data=node)
 
 
-@router.get("", response_model=NodeListOut)
+@router.get("", response_model=ApiResponse, response_model_exclude_none=True)
 async def list_nodes(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
@@ -63,16 +61,16 @@ async def list_nodes(
 
     total_pages = math.ceil(total / page_size) if total > 0 else 1
 
-    return NodeListOut(
-        items=nodes,
+    meta = PaginationMeta(
         total=total,
         page=page,
         page_size=page_size,
         total_pages=total_pages,
     )
+    return success_response(data=nodes, meta=meta)
 
 
-@router.get("/search", response_model=list[NodeOut])
+@router.get("/search", response_model=ApiResponse, response_model_exclude_none=True)
 async def search_nodes_endpoint(
     q: str = Query(..., min_length=1, description="Search term"),
     page: int = Query(1, ge=1),
@@ -80,18 +78,26 @@ async def search_nodes_endpoint(
 ):
     skip = (page - 1) * page_size
     nodes = await search_nodes(search_term=q, skip=skip, limit=page_size)
-    return nodes
+    total = len(nodes)
+    total_pages = math.ceil(total / page_size) if total > 0 else 1
+    meta = PaginationMeta(
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
+    return success_response(data=nodes, meta=meta)
 
 
-@router.get("/{node_id}", response_model=NodeOut)
+@router.get("/{node_id}", response_model=ApiResponse, response_model_exclude_none=True)
 async def read_node(node_id: int):
     node = await get_node_by_id(node_id)
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
-    return node
+    return success_response(data=node)
 
 
-@router.put("/{node_id}", response_model=NodeOut)
+@router.put("/{node_id}", response_model=ApiResponse, response_model_exclude_none=True)
 async def edit_node(node_id: int, payload: NodeUpdate):
     node = await get_node_by_id(node_id)
     if not node:
@@ -104,18 +110,19 @@ async def edit_node(node_id: int, payload: NodeUpdate):
         update_data["type"] = update_data["type"].value
 
     updated = await update_node(node_id, update_data)
-    return updated
+    return success_response(message="Node updated", data=updated)
 
 
-@router.delete("/{node_id}")
+@router.delete("/{node_id}", response_model=ApiResponse, response_model_exclude_none=True)
 async def remove_node(node_id: int):
     node = await get_node_by_id(node_id)
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
-    return await delete_node(node_id)
+    await delete_node(node_id)
+    return success_response(message="Node deleted")
 
 
-@router.delete("", response_model=NodeBulkDeleteOut)
+@router.delete("", response_model=ApiResponse, response_model_exclude_none=True)
 async def remove_nodes(payload: NodeBulkDeleteRequest):
-    result = await delete_nodes(payload.ids)
-    return result
+    await delete_nodes(payload.ids)
+    return success_response(message="Nodes deleted")

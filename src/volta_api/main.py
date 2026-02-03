@@ -1,4 +1,9 @@
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from volta_api.core.api_response import error_response
 from volta_api.core.database import database
 from volta_api.users.router import router as users_router
 from volta_api.auth.router import legacy_router as auth_legacy_router
@@ -18,6 +23,40 @@ app.include_router(vehicles_router)
 app.include_router(vehicles_ws_router)
 app.include_router(nodes_router)
 app.include_router(routes_router)
+
+
+def _extract_error_message(detail: object) -> str:
+    if isinstance(detail, str):
+        return detail
+    if isinstance(detail, dict):
+        message = detail.get("message")
+        if isinstance(message, str):
+            return message
+    return "Request failed"
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc):  # noqa: ARG001
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error_response(_extract_error_message(exc.detail)),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):  # noqa: ARG001
+    return JSONResponse(
+        status_code=422,
+        content=error_response("Validation error"),
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request, exc):  # noqa: ARG001
+    return JSONResponse(
+        status_code=500,
+        content=error_response("Internal server error"),
+    )
 
 
 @app.on_event("startup")

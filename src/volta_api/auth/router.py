@@ -8,6 +8,7 @@ from volta_api.auth.dependencies import (
     get_current_user,
     oauth2_scheme,
 )
+from volta_api.core.api_response import ApiResponse, success_response
 from volta_api.core.security import (
     verify_password,
     create_access_token,
@@ -19,7 +20,7 @@ from volta_api.core.security import (
     verify_password_reset_token,
     verify_email_verification_token,
 )
-from volta_api.users.schemas import UserCreate, UserOut
+from volta_api.users.schemas import UserCreate
 from volta_api.users.service import (
     create_user,
     get_user_by_email,
@@ -74,14 +75,16 @@ class VerifyEmailRequest(BaseModel):
     token: str
 
 
-class MessageResponse(BaseModel):
-    message: str
-
 
 # ===== Registration & Login =====
 
 
-@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=ApiResponse,
+    response_model_exclude_none=True,
+    status_code=status.HTTP_201_CREATED,
+)
 async def register_user(payload: UserCreate):
     """
     Register a new user account.
@@ -104,10 +107,10 @@ async def register_user(payload: UserCreate):
     # verification_token = create_email_verification_token(user.public_id)
     # await send_verification_email(payload.email, verification_token)
 
-    return user
+    return success_response(message="User created", data=user)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=ApiResponse, response_model_exclude_none=True)
 async def login(payload: LoginRequest):
     """
     Authenticate a user and return access + refresh tokens.
@@ -130,16 +133,19 @@ async def login(payload: LoginRequest):
     access_token = create_access_token(subject=user.public_id)
     refresh_token = create_refresh_token(subject=user.public_id)
 
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
+    return success_response(
+        message="Login successful",
+        data=TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+        ),
     )
 
 
 # ===== Token Management =====
 
 
-@router.post("/refresh", response_model=AccessTokenResponse)
+@router.post("/refresh", response_model=ApiResponse, response_model_exclude_none=True)
 async def refresh_access_token(payload: RefreshTokenRequest):
     """
     Get a new access token using a valid refresh token.
@@ -161,10 +167,13 @@ async def refresh_access_token(payload: RefreshTokenRequest):
         )
 
     new_access_token = create_access_token(subject=user_id)
-    return AccessTokenResponse(access_token=new_access_token)
+    return success_response(
+        message="Token refreshed",
+        data=AccessTokenResponse(access_token=new_access_token),
+    )
 
 
-@router.post("/logout", response_model=MessageResponse)
+@router.post("/logout", response_model=ApiResponse, response_model_exclude_none=True)
 async def logout(
     token: Annotated[str, Depends(oauth2_scheme)],
     current_user: Annotated[dict, Depends(get_current_user)],  # noqa: ARG001
@@ -176,13 +185,13 @@ async def logout(
     """
     revoke_access_token(token)
     del current_user  # Explicitly mark as intentionally unused
-    return MessageResponse(message="Successfully logged out")
+    return success_response(message="Successfully logged out")
 
 
 # ===== Email Verification =====
 
 
-@router.post("/verify-email", response_model=MessageResponse)
+@router.post("/verify-email", response_model=ApiResponse, response_model_exclude_none=True)
 async def verify_email(payload: VerifyEmailRequest):
     """
     Verify a user's email address using the verification token.
@@ -202,13 +211,17 @@ async def verify_email(payload: VerifyEmailRequest):
         )
 
     if user.is_email_verified:
-        return MessageResponse(message="Email is already verified")
+        return success_response(message="Email is already verified")
 
     await verify_user_email(user_id)
-    return MessageResponse(message="Email verified successfully")
+    return success_response(message="Email verified successfully")
 
 
-@router.post("/resend-verification", response_model=MessageResponse)
+@router.post(
+    "/resend-verification",
+    response_model=ApiResponse,
+    response_model_exclude_none=True,
+)
 async def resend_verification_email(
     current_user: Annotated[dict, Depends(get_current_user)],
 ):
@@ -226,13 +239,17 @@ async def resend_verification_email(
     # await send_verification_email(current_user.email, verification_token)
     _ = create_email_verification_token  # Mark import as used
 
-    return MessageResponse(message="Verification email sent")
+    return success_response(message="Verification email sent")
 
 
 # ===== Password Management =====
 
 
-@router.post("/forgot-password", response_model=MessageResponse)
+@router.post(
+    "/forgot-password",
+    response_model=ApiResponse,
+    response_model_exclude_none=True,
+)
 async def forgot_password(payload: ForgotPasswordRequest):
     """
     Request a password reset. A reset link will be sent to the email if it exists.
@@ -247,13 +264,17 @@ async def forgot_password(payload: ForgotPasswordRequest):
         _ = create_password_reset_token  # Mark import as used
 
     # Always return success to prevent email enumeration
-    return MessageResponse(
+    return success_response(
         message="If the email exists, a password reset link has been sent"
     )
 
 
-@router.post("/reset-password", response_model=MessageResponse)
-@legacy_router.post("/reset-password", response_model=MessageResponse)
+@router.post("/reset-password", response_model=ApiResponse, response_model_exclude_none=True)
+@legacy_router.post(
+    "/reset-password",
+    response_model=ApiResponse,
+    response_model_exclude_none=True,
+)
 async def reset_password(payload: ResetPasswordRequest):
     """
     Reset password using a valid reset token.
@@ -273,10 +294,14 @@ async def reset_password(payload: ResetPasswordRequest):
         )
 
     await update_user_password(user_id, payload.new_password)
-    return MessageResponse(message="Password has been reset successfully")
+    return success_response(message="Password has been reset successfully")
 
 
-@router.post("/change-password", response_model=MessageResponse)
+@router.post(
+    "/change-password",
+    response_model=ApiResponse,
+    response_model_exclude_none=True,
+)
 async def change_password(
     payload: ChangePasswordRequest,
     current_user: Annotated[dict, Depends(get_current_active_user)],
@@ -292,17 +317,17 @@ async def change_password(
         )
 
     await update_user_password(current_user.public_id, payload.new_password)
-    return MessageResponse(message="Password changed successfully")
+    return success_response(message="Password changed successfully")
 
 
 # ===== User Info =====
 
 
-@router.get("/me", response_model=UserOut)
+@router.get("/me", response_model=ApiResponse, response_model_exclude_none=True)
 async def get_current_user_info(
     current_user: Annotated[dict, Depends(get_current_active_user)],
 ):
     """
     Get the current authenticated user's information.
     """
-    return current_user
+    return success_response(data=current_user)
