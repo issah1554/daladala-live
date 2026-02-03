@@ -1,4 +1,4 @@
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from volta_api.core.database import database
 from .models import User
 from volta_api.core.security import hash_password
@@ -8,13 +8,14 @@ from volta_api.utils import generate_base64_id
 # ===== Create Operations =====
 
 
-async def create_user(email: str, password: str):
+async def create_user(email: str, password: str, role: str = "driver"):
     """Create a new user and return the user data."""
     public_id = generate_base64_id()
 
     query = User.__table__.insert().values(
         email=email,
         hashed_password=hash_password(password),
+        role=role,
         is_active=True,
         is_email_verified=False,
         public_id=public_id,
@@ -43,6 +44,35 @@ async def get_user_by_id(user_id: int):
     """Get a user by internal ID."""
     query = User.__table__.select().where(User.id == user_id)
     return await database.fetch_one(query)
+
+
+async def get_users(
+    skip: int = 0,
+    limit: int = 100,
+    role: str | None = None,
+    is_active: bool | None = None,
+):
+    query = User.__table__.select()
+
+    if role is not None:
+        query = query.where(User.role == role)
+    if is_active is not None:
+        query = query.where(User.is_active == is_active)
+
+    query = query.offset(skip).limit(limit)
+    return await database.fetch_all(query)
+
+
+async def get_users_count(role: str | None = None, is_active: bool | None = None) -> int:
+    query = select(func.count()).select_from(User.__table__)
+
+    if role is not None:
+        query = query.where(User.role == role)
+    if is_active is not None:
+        query = query.where(User.is_active == is_active)
+
+    result = await database.fetch_one(query)
+    return result[0] if result else 0
 
 
 # ===== Update Operations =====
@@ -88,5 +118,15 @@ async def update_user_email(public_id: str, new_email: str):
         .where(User.public_id == public_id)
         .values(email=new_email, is_email_verified=False)
     )
+    await database.execute(query)
+    return await get_user_by_public_id(public_id)
+
+
+async def update_user(public_id: str, data: dict):
+    """Update a user and return the updated user."""
+    if not data:
+        return await get_user_by_public_id(public_id)
+
+    query = update(User.__table__).where(User.public_id == public_id).values(**data)
     await database.execute(query)
     return await get_user_by_public_id(public_id)

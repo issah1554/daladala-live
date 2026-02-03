@@ -94,7 +94,11 @@ async def register_user(payload: UserCreate):
             detail="Email already registered",
         )
 
-    user = await create_user(payload.email, payload.password)
+    user = await create_user(
+        payload.email,
+        payload.password,
+        role=payload.role.value,
+    )
 
     # TODO: In production, generate token and send verification email
     # verification_token = create_email_verification_token(user.public_id)

@@ -61,3 +61,18 @@ async def get_current_verified_user(
             detail="Email not verified",
         )
     return current_user
+
+
+async def get_current_admin_user(
+    current_user: Annotated[dict, Depends(get_current_active_user)],
+):
+    """
+    Dependency to get the current active admin user.
+    Raises 403 if user is not admin.
+    """
+    if getattr(current_user, "role", None) != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
