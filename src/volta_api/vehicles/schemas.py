@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 from enum import Enum
 
@@ -20,7 +20,7 @@ class VehicleUserRole(str, Enum):
 
 
 class VehicleCreate(BaseModel):
-    plate_number: str = Field(..., min_length=1, max_length=20)
+    plate_number: str = Field(..., pattern=r"^T-\d{3}-[A-Za-z]{3}$")
     capacity: int = Field(..., gt=0)
     type: str = Field(..., min_length=1, max_length=50)
     status: VehicleStatus = VehicleStatus.ACTIVE
@@ -28,9 +28,9 @@ class VehicleCreate(BaseModel):
 
 
 class VehicleUpdate(BaseModel):
-    plate_number: Optional[str] = Field(None, min_length=1, max_length=20)
-    capacity: Optional[int] = Field(None, gt=0)
-    type: Optional[str] = Field(None, min_length=1, max_length=50)
+    plate_number: str = Field(..., pattern=r"^T-\d{3}-[A-Za-z]{3}$")
+    capacity: int = Field(..., gt=0)
+    type: str = Field(..., min_length=1, max_length=50)
     status: Optional[VehicleStatus] = None
     is_sharing_location: Optional[bool] = None
 
@@ -57,6 +57,10 @@ class VehicleListOut(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class VehicleDeleteConfirm(BaseModel):
+    confirm: Literal["DELETE"]
 
 
 # ===== VehicleUser Schemas =====

@@ -68,3 +68,7 @@ class RouteListOut(BaseModel):
 class RouteNodeListOut(BaseModel):
     items: list[RouteNodeOut]
     total: int
+
+
+class RouteNodesDelete(BaseModel):
+    route_node_ids: list[int] = Field(..., min_length=1)

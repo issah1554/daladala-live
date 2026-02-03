@@ -12,6 +12,7 @@ from .schemas import (
     VehicleUserCreate,
     VehicleUserUpdate,
     VehicleUserOut,
+    VehicleDeleteConfirm,
 )
 from .service import (
     create_vehicle,
@@ -162,7 +163,7 @@ async def toggle_location_sharing(vehicle_id: int, is_sharing: bool):
 
 
 @router.delete("/{vehicle_id}")
-async def remove_vehicle(vehicle_id: int):
+async def remove_vehicle(vehicle_id: int, payload: VehicleDeleteConfirm):
     """Delete a vehicle."""
     vehicle = await get_vehicle_by_id(vehicle_id)
     if not vehicle:

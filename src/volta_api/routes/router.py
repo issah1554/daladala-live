@@ -10,6 +10,7 @@ from .schemas import (
     RouteNodeListOut,
     RouteNodeOut,
     RouteNodeUpdate,
+    RouteNodesDelete,
     RouteOut,
     RouteUpdate,
 )
@@ -18,11 +19,14 @@ from .service import (
     create_route_node,
     delete_route,
     delete_route_node,
+    delete_route_nodes,
+    delete_route_nodes_by_ids,
     get_existing_node_ids,
     get_route_by_id,
     get_routes,
     get_routes_count,
     get_route_node_by_id,
+    get_route_nodes_by_ids,
     get_route_nodes,
     replace_route_nodes,
     update_route,
@@ -162,3 +166,30 @@ async def remove_route_node(route_id: int, route_node_id: int):
         raise HTTPException(status_code=404, detail="Route node not found")
 
     return await delete_route_node(route_node_id)
+
+
+@router.delete("/{route_id}/nodes")
+async def remove_route_nodes(route_id: int, payload: RouteNodesDelete):
+    route = await get_route_by_id(route_id)
+    if not route:
+        raise HTTPException(status_code=404, detail={"message": "Route not found"})
+
+    existing_nodes = await get_route_nodes_by_ids(payload.route_node_ids)
+    existing_ids = {node["id"] for node in existing_nodes}
+    missing = [node_id for node_id in payload.route_node_ids if node_id not in existing_ids]
+    if missing:
+        raise HTTPException(
+            status_code=404,
+            detail={"message": "Route nodes not found", "missing": missing},
+        )
+
+    mismatched = [
+        node["id"] for node in existing_nodes if node["route_id"] != route_id
+    ]
+    if mismatched:
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Route nodes do not belong to route", "mismatched": mismatched},
+        )
+
+    return await delete_route_nodes_by_ids(route_id, payload.route_node_ids)

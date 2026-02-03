@@ -85,6 +85,13 @@ async def get_route_node_by_id(route_node_id: int):
     return await database.fetch_one(query)
 
 
+async def get_route_nodes_by_ids(route_node_ids: list[int]):
+    if not route_node_ids:
+        return []
+    query = RouteNode.__table__.select().where(RouteNode.id.in_(route_node_ids))
+    return await database.fetch_all(query)
+
+
 async def update_route_node(route_node_id: int, data: dict):
     if not data:
         return await get_route_node_by_id(route_node_id)
@@ -102,6 +109,20 @@ async def delete_route_node(route_node_id: int):
     query = delete(RouteNode.__table__).where(RouteNode.id == route_node_id)
     await database.execute(query)
     return {"deleted": route_node_id}
+
+
+async def delete_route_nodes(route_id: int):
+    query = delete(RouteNode.__table__).where(RouteNode.route_id == route_id)
+    await database.execute(query)
+    return {"deleted": {"route_id": route_id}}
+
+
+async def delete_route_nodes_by_ids(route_id: int, route_node_ids: list[int]):
+    query = delete(RouteNode.__table__).where(
+        RouteNode.route_id == route_id, RouteNode.id.in_(route_node_ids)
+    )
+    await database.execute(query)
+    return {"deleted": {"route_id": route_id, "route_node_ids": route_node_ids}}
 
 
 async def replace_route_nodes(route_id: int, nodes: list[dict]):
