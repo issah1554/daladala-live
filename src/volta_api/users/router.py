@@ -3,15 +3,22 @@ import math
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from volta_api.auth.dependencies import get_current_admin_user
-from .schemas import UserCreate, UserListOut, UserOut, UserUpdate, UserRole
+from .schemas import (
+    UserCreate,
+    UserDeleteConfirm,
+    UserListOut,
+    UserOut,
+    UserUpdate,
+    UserRole,
+)
 from .service import (
     create_user,
     get_user_by_email,
     get_user_by_public_id,
     get_users,
     get_users_count,
+    delete_user,
     update_user,
-    update_user_active_status,
 )
 
 router = APIRouter()
@@ -64,6 +71,19 @@ async def list_users(
     )
 
 
+@users_router.post("", response_model=UserOut, status_code=201)
+async def create_user_admin(payload: UserCreate):
+    existing = await get_user_by_email(payload.email)
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    user = await create_user(
+        payload.email,
+        payload.password,
+        role=payload.role.value,
+    )
+    return user
+
+
 @users_router.get("/{public_id}", response_model=UserOut)
 async def read_user(public_id: str):
     user = await get_user_by_public_id(public_id)
@@ -92,11 +112,13 @@ async def edit_user(public_id: str, payload: UserUpdate):
 
 
 @users_router.delete("/{public_id}")
-async def deactivate_user(public_id: str):
+async def deactivate_user(public_id: str, payload: UserDeleteConfirm):
     user = await get_user_by_public_id(public_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return await update_user_active_status(public_id, False)
+    if payload.confirm != public_id:
+        raise HTTPException(status_code=400, detail="Confirmation does not match user")
+    return await delete_user(public_id)
 
 
 router.include_router(register_router)

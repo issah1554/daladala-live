@@ -1,6 +1,8 @@
-from sqlalchemy import select, update, func
+from sqlalchemy import delete, select, update, func
 from volta_api.core.database import database
 from .models import User
+from volta_api.routes.models import Route
+from volta_api.vehicles.models import VehicleUser
 from volta_api.core.security import hash_password
 from volta_api.utils import generate_base64_id
 
@@ -130,3 +132,28 @@ async def update_user(public_id: str, data: dict):
     query = update(User.__table__).where(User.public_id == public_id).values(**data)
     await database.execute(query)
     return await get_user_by_public_id(public_id)
+
+
+async def delete_user(public_id: str):
+    """Hard delete a user and related references."""
+    user = await get_user_by_public_id(public_id)
+    if not user:
+        return None
+
+    async with database.transaction():
+        delete_vehicle_users = delete(VehicleUser.__table__).where(
+            VehicleUser.user_id == public_id
+        )
+        await database.execute(delete_vehicle_users)
+
+        update_routes = (
+            update(Route.__table__)
+            .where(Route.created_by == user.id)
+            .values(created_by=None)
+        )
+        await database.execute(update_routes)
+
+        delete_user_query = delete(User.__table__).where(User.public_id == public_id)
+        await database.execute(delete_user_query)
+
+    return {"deleted": public_id}

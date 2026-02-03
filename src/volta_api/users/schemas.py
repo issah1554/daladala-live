@@ -41,3 +41,7 @@ class UserListOut(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class UserDeleteConfirm(BaseModel):
+    confirm: str = Field(..., min_length=1)
