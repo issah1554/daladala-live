@@ -1,10 +1,13 @@
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Mapping, Optional
 
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
+from pydantic.config import ConfigDict
 
 
 class ApiResponse(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     success: bool
     timestamp: int
     message: Optional[str] = None
@@ -19,8 +22,16 @@ class PaginationMeta(BaseModel):
     total_pages: int
 
 
-def _unix_ms_timestamp() -> int:
+def x() -> int:
     return int(datetime.now(timezone.utc).timestamp() * 1000)
+
+
+def _normalize_data(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return dict(value)
+    if isinstance(value, (list, tuple, set)):
+        return [_normalize_data(item) for item in value]
+    return value
 
 
 def success_response(*, message: str | None = None, data: Any = None, meta: Any = None):
@@ -31,15 +42,15 @@ def success_response(*, message: str | None = None, data: Any = None, meta: Any 
     if message is not None:
         payload["message"] = message
     if data is not None:
-        payload["data"] = data
+        payload["data"] = _normalize_data(data)
     if meta is not None:
         payload["meta"] = meta
-    return payload
+    return jsonable_encoder(payload)
 
 
 def error_response(message: str):
-    return {
+    return jsonable_encoder({
         "success": False,
         "timestamp": _unix_ms_timestamp(),
         "message": message,
-    }
+    })
