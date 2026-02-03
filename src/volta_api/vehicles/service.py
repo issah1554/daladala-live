@@ -1,6 +1,6 @@
 from sqlalchemy import select, update, delete, func, and_, or_
 from typing import Optional
-from daladala_live.core.database import database
+from volta_api.core.database import database
 from .models import Vehicle, VehicleUser
 
 

@@ -1,6 +1,6 @@
 from sqlalchemy import BigInteger, Column, DateTime, Index, Numeric, String, text
 from sqlalchemy.sql import func
-from daladala_live.core.database import Base
+from volta_api.core.database import Base
 
 
 class Node(Base):

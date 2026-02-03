@@ -1,4 +1,4 @@
-# daladala_live/core/websocket_manager.py
+# volta_api/core/websocket_manager.py
 from typing import List
 from fastapi import WebSocket
 

@@ -1,4 +1,4 @@
-# daladala_live/core/redis.py
+# volta_api/core/redis.py
 import redis.asyncio as redis
 
 REDIS_URL = "redis://localhost:6379/0"

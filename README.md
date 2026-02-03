@@ -14,5 +14,5 @@ poetry run alembic upgrade head
 ## Run the application
 
 ```bash
-poetry run uvicorn daladala_live.main:app --reload --app-dir src
+poetry run uvicorn volta_api.main:app --reload --app-dir src
 ```

@@ -2,9 +2,9 @@ from typing import Optional
 
 from sqlalchemy import delete, func, select, update
 
-from daladala_live.core.database import database
+from volta_api.core.database import database
 from .models import Route, RouteNode
-from daladala_live.nodes.models import Node
+from volta_api.nodes.models import Node
 
 
 async def create_route(data: dict):

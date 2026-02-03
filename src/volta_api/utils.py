@@ -1,4 +1,4 @@
-# src/daladala_live/utils.py
+# src/volta_api/utils.py
 import secrets
 import base64
 

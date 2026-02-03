@@ -2,7 +2,7 @@ import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from daladala_live.auth.dependencies import get_current_active_user
+from volta_api.auth.dependencies import get_current_active_user
 from .schemas import (
     RouteCreate,
     RouteListOut,

@@ -1,8 +1,8 @@
 from sqlalchemy import select, update
-from daladala_live.core.database import database
+from volta_api.core.database import database
 from .models import User
-from daladala_live.core.security import hash_password
-from daladala_live.utils import generate_base64_id
+from volta_api.core.security import hash_password
+from volta_api.utils import generate_base64_id
 
 
 # ===== Create Operations =====

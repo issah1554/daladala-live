@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.sql import func
-from daladala_live.core.database import Base
-from daladala_live.utils import generate_base64_id
+from volta_api.core.database import Base
+from volta_api.utils import generate_base64_id
 
 
 class Token(Base):

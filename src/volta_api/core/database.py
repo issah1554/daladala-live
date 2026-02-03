@@ -1,7 +1,7 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 from databases import Database
-from daladala_live.core.config import DATABASE_URL
+from volta_api.core.config import DATABASE_URL
 
 # SQLAlchemy Base
 Base = declarative_base()

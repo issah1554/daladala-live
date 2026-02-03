@@ -2,7 +2,7 @@ from typing import Optional
 
 from sqlalchemy import and_, delete, func, select, update
 
-from daladala_live.core.database import database
+from volta_api.core.database import database
 from .models import Node
 
 

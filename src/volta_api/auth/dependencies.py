@@ -2,8 +2,8 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from daladala_live.core.security import verify_access_token
-from daladala_live.users.service import get_user_by_public_id
+from volta_api.core.security import verify_access_token
+from volta_api.users.service import get_user_by_public_id
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")

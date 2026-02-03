@@ -1,5 +1,5 @@
 from fastapi_mail import FastMail, ConnectionConfig
-from daladala_live.core.settings import settings
+from volta_api.core.settings import settings
 
 conf = ConnectionConfig(
     MAIL_USERNAME=settings.MAIL_USERNAME,

@@ -19,11 +19,11 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 # target_metadata = None
-from daladala_live.core.database import Base  # or wherever your Base is defined
-from daladala_live.users.models import User  # noqa
-from daladala_live.vehicles.models import Vehicle, VehicleUser  # noqa
-from daladala_live.nodes.models import Node  # noqa
-from daladala_live.routes.models import Route, RouteNode  # noqa
+from volta_api.core.database import Base  # or wherever your Base is defined
+from volta_api.users.models import User  # noqa
+from volta_api.vehicles.models import Vehicle, VehicleUser  # noqa
+from volta_api.nodes.models import Node  # noqa
+from volta_api.routes.models import Route, RouteNode  # noqa
 
 target_metadata = Base.metadata
 
@@ -60,7 +60,7 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations using an online database connection."""
-    from daladala_live.core.config import DATABASE_URL
+    from volta_api.core.config import DATABASE_URL
     from sqlalchemy import create_engine
     from alembic import context
 

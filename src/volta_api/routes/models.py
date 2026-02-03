@@ -13,7 +13,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import func
 
-from daladala_live.core.database import Base
+from volta_api.core.database import Base
 
 
 class Route(Base):

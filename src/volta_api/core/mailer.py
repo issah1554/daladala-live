@@ -1,6 +1,6 @@
-# daladala_live/core/mailer.py
+# volta_api/core/mailer.py
 from fastapi_mail import MessageSchema, MessageType
-from daladala_live.core.mail import fastmail
+from volta_api.core.mail import fastmail
 
 
 async def send_welcome_email(to_email: str):

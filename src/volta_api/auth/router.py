@@ -3,12 +3,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 
-from daladala_live.auth.dependencies import (
+from volta_api.auth.dependencies import (
     get_current_active_user,
     get_current_user,
     oauth2_scheme,
 )
-from daladala_live.core.security import (
+from volta_api.core.security import (
     verify_password,
     create_access_token,
     create_refresh_token,
@@ -19,8 +19,8 @@ from daladala_live.core.security import (
     verify_password_reset_token,
     verify_email_verification_token,
 )
-from daladala_live.users.schemas import UserCreate, UserOut
-from daladala_live.users.service import (
+from volta_api.users.schemas import UserCreate, UserOut
+from volta_api.users.service import (
     create_user,
     get_user_by_email,
     get_user_by_public_id,

@@ -1,7 +1,7 @@
-# daladala_live/vehicles/ws.py
+# volta_api/vehicles/ws.py
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Dict, List
-from daladala_live.core.redis import redis_client
+from volta_api.core.redis import redis_client
 import json
 import asyncio
 
