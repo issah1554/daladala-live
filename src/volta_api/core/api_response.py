@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 class ApiResponse(BaseModel):
     success: bool
-    timestamp: str
+    timestamp: int
     message: Optional[str] = None
     data: Optional[Any] = None
     meta: Optional[Any] = None
@@ -19,14 +19,14 @@ class PaginationMeta(BaseModel):
     total_pages: int
 
 
-def _iso_timestamp() -> str:
-    return datetime.now(timezone.utc).isoformat()
+def _unix_ms_timestamp() -> int:
+    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def success_response(*, message: str | None = None, data: Any = None, meta: Any = None):
     payload: dict[str, Any] = {
         "success": True,
-        "timestamp": _iso_timestamp(),
+        "timestamp": _unix_ms_timestamp(),
     }
     if message is not None:
         payload["message"] = message
@@ -40,6 +40,6 @@ def success_response(*, message: str | None = None, data: Any = None, meta: Any 
 def error_response(message: str):
     return {
         "success": False,
-        "timestamp": _iso_timestamp(),
+        "timestamp": _unix_ms_timestamp(),
         "message": message,
     }
