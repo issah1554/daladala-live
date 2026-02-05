@@ -40,6 +40,43 @@ async def get_vehicles(
     return await database.fetch_all(query)
 
 
+async def get_vehicles_for_user(
+    user_id: str,
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    vehicle_type: Optional[str] = None,
+    is_sharing_location: Optional[bool] = None,
+):
+    """Get vehicles associated with a specific user."""
+    vehicles_table = Vehicle.__table__
+    vehicle_users_table = VehicleUser.__table__
+    query = (
+        select(vehicles_table)
+        .select_from(
+            vehicles_table.join(
+                vehicle_users_table,
+                vehicles_table.c.id == vehicle_users_table.c.vehicle_id,
+            )
+        )
+        .where(vehicle_users_table.c.user_id == user_id)
+    )
+
+    filters = []
+    if status:
+        filters.append(vehicles_table.c.status == status)
+    if vehicle_type:
+        filters.append(vehicles_table.c.type == vehicle_type)
+    if is_sharing_location is not None:
+        filters.append(vehicles_table.c.is_sharing_location == is_sharing_location)
+
+    if filters:
+        query = query.where(and_(*filters))
+
+    query = query.offset(skip).limit(limit)
+    return await database.fetch_all(query)
+
+
 async def get_vehicles_count(
     status: Optional[str] = None,
     vehicle_type: Optional[str] = None,
@@ -63,15 +100,94 @@ async def get_vehicles_count(
     return result[0] if result else 0
 
 
+async def get_vehicles_count_for_user(
+    user_id: str,
+    status: Optional[str] = None,
+    vehicle_type: Optional[str] = None,
+    is_sharing_location: Optional[bool] = None,
+) -> int:
+    """Get total count of vehicles associated with a specific user."""
+    vehicles_table = Vehicle.__table__
+    vehicle_users_table = VehicleUser.__table__
+    query = (
+        select(func.count())
+        .select_from(
+            vehicles_table.join(
+                vehicle_users_table,
+                vehicles_table.c.id == vehicle_users_table.c.vehicle_id,
+            )
+        )
+        .where(vehicle_users_table.c.user_id == user_id)
+    )
+
+    filters = []
+    if status:
+        filters.append(vehicles_table.c.status == status)
+    if vehicle_type:
+        filters.append(vehicles_table.c.type == vehicle_type)
+    if is_sharing_location is not None:
+        filters.append(vehicles_table.c.is_sharing_location == is_sharing_location)
+
+    if filters:
+        query = query.where(and_(*filters))
+
+    result = await database.fetch_one(query)
+    return result[0] if result else 0
+
+
 async def get_vehicle_by_id(vehicle_id: int):
     """Get a single vehicle by ID."""
     query = Vehicle.__table__.select().where(Vehicle.id == vehicle_id)
     return await database.fetch_one(query)
 
 
+async def get_vehicle_by_id_for_user(vehicle_id: int, user_id: str):
+    """Get a single vehicle by ID if associated with a user."""
+    vehicles_table = Vehicle.__table__
+    vehicle_users_table = VehicleUser.__table__
+    query = (
+        select(vehicles_table)
+        .select_from(
+            vehicles_table.join(
+                vehicle_users_table,
+                vehicles_table.c.id == vehicle_users_table.c.vehicle_id,
+            )
+        )
+        .where(
+            and_(
+                vehicles_table.c.id == vehicle_id,
+                vehicle_users_table.c.user_id == user_id,
+            )
+        )
+    )
+    return await database.fetch_one(query)
+
+
 async def get_vehicle_by_plate_number(plate_number: str):
     """Get a single vehicle by plate number."""
     query = Vehicle.__table__.select().where(Vehicle.plate_number == plate_number)
+    return await database.fetch_one(query)
+
+
+async def get_vehicle_by_plate_number_for_user(plate_number: str, user_id: str):
+    """Get a single vehicle by plate number if associated with a user."""
+    vehicles_table = Vehicle.__table__
+    vehicle_users_table = VehicleUser.__table__
+    query = (
+        select(vehicles_table)
+        .select_from(
+            vehicles_table.join(
+                vehicle_users_table,
+                vehicles_table.c.id == vehicle_users_table.c.vehicle_id,
+            )
+        )
+        .where(
+            and_(
+                vehicles_table.c.plate_number == plate_number,
+                vehicle_users_table.c.user_id == user_id,
+            )
+        )
+    )
     return await database.fetch_one(query)
 
 
@@ -84,6 +200,36 @@ async def search_vehicles(search_term: str, skip: int = 0, limit: int = 100):
             or_(
                 Vehicle.plate_number.ilike(search_pattern),
                 Vehicle.type.ilike(search_pattern),
+            )
+        )
+        .offset(skip)
+        .limit(limit)
+    )
+    return await database.fetch_all(query)
+
+
+async def search_vehicles_for_user(
+    user_id: str, search_term: str, skip: int = 0, limit: int = 100
+):
+    """Search vehicles associated with a user by plate number or type."""
+    vehicles_table = Vehicle.__table__
+    vehicle_users_table = VehicleUser.__table__
+    search_pattern = f"%{search_term}%"
+    query = (
+        select(vehicles_table)
+        .select_from(
+            vehicles_table.join(
+                vehicle_users_table,
+                vehicles_table.c.id == vehicle_users_table.c.vehicle_id,
+            )
+        )
+        .where(
+            and_(
+                vehicle_users_table.c.user_id == user_id,
+                or_(
+                    vehicles_table.c.plate_number.ilike(search_pattern),
+                    vehicles_table.c.type.ilike(search_pattern),
+                ),
             )
         )
         .offset(skip)

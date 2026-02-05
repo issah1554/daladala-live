@@ -11,14 +11,16 @@ from .schemas import (
     VehicleUserCreate,
     VehicleUserUpdate,
     VehicleDeleteConfirm,
+    VehicleUserRole,
 )
 from .service import (
     create_vehicle,
-    get_vehicles,
-    get_vehicles_count,
-    get_vehicle_by_id,
+    get_vehicles_for_user,
+    get_vehicles_count_for_user,
+    get_vehicle_by_id_for_user,
     get_vehicle_by_plate_number,
-    search_vehicles,
+    get_vehicle_by_plate_number_for_user,
+    search_vehicles_for_user,
     update_vehicle,
     delete_vehicle,
     update_vehicle_location_sharing,
@@ -41,7 +43,10 @@ router = APIRouter(
 
 
 @router.post("", response_model=ApiResponse, response_model_exclude_none=True, status_code=201)
-async def register_vehicle(payload: VehicleCreate):
+async def register_vehicle(
+    payload: VehicleCreate,
+    current_user=Depends(get_current_active_user),
+):
     """Create a new vehicle."""
     # Check for duplicate plate number
     existing = await get_vehicle_by_plate_number(payload.plate_number)
@@ -52,6 +57,13 @@ async def register_vehicle(payload: VehicleCreate):
         )
 
     vehicle = await create_vehicle(payload.model_dump())
+    await assign_user_to_vehicle(
+        {
+            "vehicle_id": vehicle.id,
+            "user_id": current_user.public_id,
+            "role": VehicleUserRole.OWNER.value,
+        }
+    )
     return success_response(message="Vehicle created", data=vehicle)
 
 
@@ -64,12 +76,14 @@ async def list_vehicles(
     is_sharing_location: Optional[bool] = Query(
         None, description="Filter by location sharing status"
     ),
+    current_user=Depends(get_current_active_user),
 ):
     """List all vehicles with pagination and filtering."""
     skip = (page - 1) * page_size
     status_value = status.value if status else None
 
-    vehicles = await get_vehicles(
+    vehicles = await get_vehicles_for_user(
+        user_id=current_user.public_id,
         skip=skip,
         limit=page_size,
         status=status_value,
@@ -77,7 +91,8 @@ async def list_vehicles(
         is_sharing_location=is_sharing_location,
     )
 
-    total = await get_vehicles_count(
+    total = await get_vehicles_count_for_user(
+        user_id=current_user.public_id,
         status=status_value,
         vehicle_type=vehicle_type,
         is_sharing_location=is_sharing_location,
@@ -99,10 +114,16 @@ async def search_vehicles_endpoint(
     q: str = Query(..., min_length=1, description="Search term"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    current_user=Depends(get_current_active_user),
 ):
     """Search vehicles by plate number or type."""
     skip = (page - 1) * page_size
-    vehicles = await search_vehicles(search_term=q, skip=skip, limit=page_size)
+    vehicles = await search_vehicles_for_user(
+        user_id=current_user.public_id,
+        search_term=q,
+        skip=skip,
+        limit=page_size,
+    )
     total = len(vehicles)
     total_pages = math.ceil(total / page_size) if total > 0 else 1
     meta = PaginationMeta(
@@ -115,18 +136,26 @@ async def search_vehicles_endpoint(
 
 
 @router.get("/plate/{plate_number}", response_model=ApiResponse, response_model_exclude_none=True)
-async def read_vehicle_by_plate(plate_number: str):
+async def read_vehicle_by_plate(
+    plate_number: str,
+    current_user=Depends(get_current_active_user),
+):
     """Get a vehicle by its plate number."""
-    vehicle = await get_vehicle_by_plate_number(plate_number)
+    vehicle = await get_vehicle_by_plate_number_for_user(
+        plate_number, current_user.public_id
+    )
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
     return success_response(data=vehicle)
 
 
 @router.get("/{vehicle_id}", response_model=ApiResponse, response_model_exclude_none=True)
-async def read_vehicle(vehicle_id: int):
+async def read_vehicle(
+    vehicle_id: int,
+    current_user=Depends(get_current_active_user),
+):
     """Get a vehicle by ID."""
-    vehicle = await get_vehicle_by_id(vehicle_id)
+    vehicle = await get_vehicle_by_id_for_user(vehicle_id, current_user.public_id)
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
     return success_response(data=vehicle)
@@ -234,8 +263,13 @@ async def list_vehicle_users(vehicle_id: int):
 
 
 @router.get("/users/{user_id}/vehicles", response_model=ApiResponse, response_model_exclude_none=True)
-async def list_user_vehicles(user_id: str):
+async def list_user_vehicles(
+    user_id: str,
+    current_user=Depends(get_current_active_user),
+):
     """Get all vehicles assigned to a user."""
+    if user_id != current_user.public_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     vehicles = await get_vehicles_by_user(user_id)
     total = len(vehicles)
     meta = PaginationMeta(
