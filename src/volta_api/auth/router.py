@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
+from pydantic.config import ConfigDict
 
 from volta_api.auth.dependencies import (
     get_current_active_user,
@@ -51,6 +52,16 @@ class TokenResponse(BaseModel):
 class AccessTokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+class LoginUserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    public_id: str
+    full_name: str | None = None
+    email: EmailStr
+    role: str
+
+class LoginResponse(TokenResponse):
+    user: LoginUserOut
 
 
 class RefreshTokenRequest(BaseModel):
@@ -136,9 +147,10 @@ async def login(payload: LoginRequest):
 
     return success_response(
         message="Login successful",
-        data=TokenResponse(
+        data=LoginResponse(
             access_token=access_token,
             refresh_token=refresh_token,
+            user=LoginUserOut.model_validate(user),
         ),
     )
 
