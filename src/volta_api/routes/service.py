@@ -14,7 +14,19 @@ async def create_route(data: dict):
 
 
 async def get_route_by_id(route_id: int):
-    query = Route.__table__.select().where(Route.id == route_id)
+    query = (
+        Route.__table__
+        .select()
+        .with_only_columns(
+            Route.id,
+            Route.code,
+            Route.name,
+            Route.geometry,
+            Route.is_active,
+            Route.created_at,
+        )
+        .where(Route.id == route_id)
+    )
     return await database.fetch_one(query)
 
 
@@ -23,7 +35,18 @@ async def get_routes(
     limit: int = 100,
     is_active: Optional[bool] = None,
 ):
-    query = Route.__table__.select()
+    query = (
+        Route.__table__
+        .select()
+        .with_only_columns(
+            Route.id,
+            Route.code,
+            Route.name,
+            Route.geometry,
+            Route.is_active,
+            Route.created_at,
+        )
+    )
 
     if is_active is not None:
         query = query.where(Route.is_active == is_active)

@@ -1,6 +1,8 @@
 import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pymysql.err import IntegrityError as PyMySQLIntegrityError
+from sqlalchemy.exc import IntegrityError as SQLAlchemyIntegrityError
 
 from volta_api.auth.dependencies import get_current_active_user
 from volta_api.core.api_response import ApiResponse, PaginationMeta, success_response
@@ -58,8 +60,18 @@ async def list_routes(
 
 
 @router.post("", response_model=ApiResponse, response_model_exclude_none=True, status_code=201)
-async def register_route(payload: RouteCreate):
-    route = await create_route(payload.model_dump())
+async def register_route(
+    payload: RouteCreate,
+    current_user=Depends(get_current_active_user),
+):
+    data = payload.model_dump()
+    data["created_by"] = current_user.id
+    try:
+        route = await create_route(data)
+    except (SQLAlchemyIntegrityError, PyMySQLIntegrityError) as exc:
+        if "uq_routes_code" in str(exc):
+            raise HTTPException(status_code=400, detail="Route code already exists") from exc
+        raise
     return success_response(message="Route created", data=route)
 
 

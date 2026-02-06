@@ -1,7 +1,15 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+import re
+
+from pydantic import BaseModel, Field, field_validator
+
+_LINESTRING_RE = re.compile(
+    r"^LINESTRING\(\s*-?\d+(\.\d+)?\s+-?\d+(\.\d+)?"
+    r"(\s*,\s*-?\d+(\.\d+)?\s+-?\d+(\.\d+)?)*\s*\)$",
+    re.IGNORECASE,
+)
 
 
 class RouteNodeCreate(BaseModel):
@@ -33,15 +41,33 @@ class RouteNodeUpdate(BaseModel):
 class RouteCreate(BaseModel):
     code: Optional[str] = Field(None, max_length=50)
     name: str = Field(..., min_length=1, max_length=150)
-    created_by: Optional[int] = None
+    geometry: Optional[str] = None
     is_active: bool = True
+
+    @field_validator("geometry")
+    @classmethod
+    def validate_geometry(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        if not _LINESTRING_RE.match(value.strip()):
+            raise ValueError("geometry must be a WKT LINESTRING")
+        return value.strip()
 
 
 class RouteUpdate(BaseModel):
     code: Optional[str] = Field(None, max_length=50)
     name: Optional[str] = Field(None, min_length=1, max_length=150)
-    created_by: Optional[int] = None
+    geometry: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @field_validator("geometry")
+    @classmethod
+    def validate_geometry(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        if not _LINESTRING_RE.match(value.strip()):
+            raise ValueError("geometry must be a WKT LINESTRING")
+        return value.strip()
 
 
 class RouteOut(BaseModel):

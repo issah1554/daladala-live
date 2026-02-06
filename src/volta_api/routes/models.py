@@ -8,6 +8,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    Text,
     UniqueConstraint,
     text,
 )
@@ -26,6 +27,7 @@ class Route(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     code = Column(String(50), nullable=True)
     name = Column(String(150), nullable=False)
+    geometry = Column(Text, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     is_active = Column(Boolean, nullable=False, server_default=text("1"), default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
