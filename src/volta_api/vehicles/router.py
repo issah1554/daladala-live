@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from volta_api.auth.dependencies import get_current_active_user, get_current_admin_user
 from volta_api.core.api_response import ApiResponse, PaginationMeta, success_response
+from volta_api.routes.service import get_route_by_id
 from .schemas import (
     VehicleCreate,
+    VehicleRouteAssign,
     VehicleUpdate,
     VehicleStatus,
     VehicleUserCreate,
@@ -23,6 +25,7 @@ from .service import (
     search_vehicles_for_user,
     get_vehicles_with_owners,
     get_vehicles_count,
+    get_vehicle_by_id,
     update_vehicle,
     delete_vehicle,
     update_vehicle_location_sharing,
@@ -64,6 +67,11 @@ async def register_vehicle(
             status_code=400,
             detail=f"Vehicle with plate number '{payload.plate_number}' already exists",
         )
+
+    if payload.route_id is not None:
+        route = await get_route_by_id(payload.route_id)
+        if not route:
+            raise HTTPException(status_code=404, detail="Route not found")
 
     vehicle = await create_vehicle(payload.model_dump())
     await assign_user_to_vehicle(
@@ -244,6 +252,10 @@ async def edit_vehicle(vehicle_id: int, payload: VehicleUpdate):
     # Convert enum to string value if present
     if "status" in update_data and update_data["status"]:
         update_data["status"] = update_data["status"].value
+    if "route_id" in update_data and update_data["route_id"] is not None:
+        route = await get_route_by_id(update_data["route_id"])
+        if not route:
+            raise HTTPException(status_code=404, detail="Route not found")
 
     updated = await update_vehicle(vehicle_id, update_data)
     return success_response(message="Vehicle updated", data=updated)
@@ -262,6 +274,26 @@ async def toggle_location_sharing(vehicle_id: int, is_sharing: bool):
 
     updated = await update_vehicle_location_sharing(vehicle_id, is_sharing)
     return success_response(message="Vehicle updated", data=updated)
+
+
+@router.patch(
+    "/{vehicle_id}/route",
+    response_model=ApiResponse,
+    response_model_exclude_none=True,
+)
+async def assign_vehicle_route(vehicle_id: int, payload: VehicleRouteAssign):
+    """Assign or clear a route for a vehicle."""
+    vehicle = await get_vehicle_by_id(vehicle_id)
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+
+    if payload.route_id is not None:
+        route = await get_route_by_id(payload.route_id)
+        if not route:
+            raise HTTPException(status_code=404, detail="Route not found")
+
+    updated = await update_vehicle(vehicle_id, {"route_id": payload.route_id})
+    return success_response(message="Vehicle route updated", data=updated)
 
 
 @router.delete(

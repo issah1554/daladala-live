@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.sql import func
 from volta_api.core.database import Base
 
@@ -11,6 +11,7 @@ class Vehicle(Base):
     capacity = Column(Integer, nullable=False)
     type = Column(String(50), nullable=False)
     status = Column(String(20), nullable=False)  # active, inactive, maintenance
+    route_id = Column(BigInteger, ForeignKey("routes.id", ondelete="SET NULL"), nullable=True)
     is_sharing_location = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(

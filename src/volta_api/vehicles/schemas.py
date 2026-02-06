@@ -24,6 +24,7 @@ class VehicleCreate(BaseModel):
     capacity: int = Field(..., gt=0)
     type: str = Field(..., min_length=1, max_length=50)
     status: VehicleStatus = VehicleStatus.ACTIVE
+    route_id: Optional[int] = None
     is_sharing_location: bool = False
 
 
@@ -32,6 +33,7 @@ class VehicleUpdate(BaseModel):
     capacity: int = Field(..., gt=0)
     type: str = Field(..., min_length=1, max_length=50)
     status: Optional[VehicleStatus] = None
+    route_id: Optional[int] = None
     is_sharing_location: Optional[bool] = None
 
 
@@ -40,6 +42,7 @@ class VehicleOut(BaseModel):
     capacity: int
     type: str
     status: str
+    route_id: Optional[int] = None
     created_at: datetime
 
     class Config:
@@ -58,6 +61,13 @@ class VehicleListOut(BaseModel):
 
 class VehicleDeleteConfirm(BaseModel):
     confirm: Literal["DELETE"]
+
+
+# ===== Vehicle Route Schemas =====
+
+
+class VehicleRouteAssign(BaseModel):
+    route_id: Optional[int] = None
 
 
 # ===== VehicleUser Schemas =====
