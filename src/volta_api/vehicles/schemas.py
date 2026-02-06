@@ -36,14 +36,11 @@ class VehicleUpdate(BaseModel):
 
 
 class VehicleOut(BaseModel):
-    id: int
     plate_number: str
     capacity: int
     type: str
     status: str
-    is_sharing_location: bool
     created_at: datetime
-    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

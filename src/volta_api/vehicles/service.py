@@ -1,6 +1,7 @@
 from sqlalchemy import select, update, delete, func, and_, or_
 from typing import Optional
 from volta_api.core.database import database
+from volta_api.users.models import User
 from .models import Vehicle, VehicleUser
 
 
@@ -236,6 +237,81 @@ async def search_vehicles_for_user(
         .limit(limit)
     )
     return await database.fetch_all(query)
+
+
+async def get_vehicles_with_owners(
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    vehicle_type: Optional[str] = None,
+    is_sharing_location: Optional[bool] = None,
+):
+    """Get vehicles with their owner user info (admin view)."""
+    vehicles_table = Vehicle.__table__
+    vehicle_users_table = VehicleUser.__table__
+    users_table = User.__table__
+
+    vehicles_query = select(vehicles_table)
+
+    filters = []
+    if status:
+        filters.append(vehicles_table.c.status == status)
+    if vehicle_type:
+        filters.append(vehicles_table.c.type == vehicle_type)
+    if is_sharing_location is not None:
+        filters.append(vehicles_table.c.is_sharing_location == is_sharing_location)
+
+    if filters:
+        vehicles_query = vehicles_query.where(and_(*filters))
+
+    vehicles_query = vehicles_query.offset(skip).limit(limit)
+    vehicles_subq = vehicles_query.subquery()
+
+    join_clause = (
+        vehicles_subq.outerjoin(
+            vehicle_users_table,
+            and_(
+                vehicles_subq.c.id == vehicle_users_table.c.vehicle_id,
+                vehicle_users_table.c.role == "owner",
+            ),
+        ).outerjoin(
+            users_table,
+            vehicle_users_table.c.user_id == users_table.c.public_id,
+        )
+    )
+
+    query = select(
+        vehicles_subq,
+        users_table.c.public_id.label("owner_public_id"),
+        users_table.c.full_name.label("owner_full_name"),
+        users_table.c.email.label("owner_email"),
+    ).select_from(join_clause)
+
+    rows = await database.fetch_all(query)
+    vehicles_by_id: dict[int, dict] = {}
+    vehicle_columns = list(vehicles_subq.c.keys())
+
+    for row in rows:
+        vehicle_id = row["id"]
+        vehicle_entry = vehicles_by_id.get(vehicle_id)
+        if not vehicle_entry:
+            vehicle_entry = {
+                "vehicle": {key: row[key] for key in vehicle_columns},
+                "owners": [],
+            }
+            vehicles_by_id[vehicle_id] = vehicle_entry
+
+        owner_public_id = row.get("owner_public_id")
+        if owner_public_id:
+            vehicle_entry["owners"].append(
+                {
+                    "public_id": owner_public_id,
+                    "full_name": row.get("owner_full_name"),
+                    "email": row.get("owner_email"),
+                }
+            )
+
+    return list(vehicles_by_id.values())
 
 
 async def update_vehicle(vehicle_id: int, data: dict):
