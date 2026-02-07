@@ -10,7 +10,7 @@ from volta_api.users.router import router as users_router
 from volta_api.auth.router import legacy_router as auth_legacy_router
 from volta_api.auth.router import router as auth_router
 from volta_api.vehicles.router import router as vehicles_router
-from volta_api.vehicles.ws import router as vehicles_ws_router
+from ws.ws import router as vehicles_ws_router
 from volta_api.nodes.router import router as nodes_router
 from volta_api.routes.router import router as routes_router
 

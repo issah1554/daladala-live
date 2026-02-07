@@ -5,7 +5,7 @@ from volta_api.core.redis import redis_client
 import json
 import asyncio
 
-router = APIRouter(prefix="/ws", tags=["vehicles"])
+router = APIRouter(prefix="/volta/ws", tags=["vehicles"])
 
 
 class ConnectionManager:
@@ -28,7 +28,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-@router.websocket("/locations")
+@router.websocket("")
 async def vehicle_locations(websocket: WebSocket):
     """
     Handles both vehicles sending updates and commuters receiving them.
@@ -36,7 +36,25 @@ async def vehicle_locations(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            data = await websocket.receive_json()
+            try:
+                data = await websocket.receive_json()
+            except json.JSONDecodeError:
+                await websocket.send_json(
+                    {
+                        "error": "Invalid payload",
+                        "expected_format": {
+                            "vehicle_id": "string",
+                            "lat": "number",
+                            "lng": "number",
+                        },
+                        "example": {
+                            "vehicle_id": "EL25G74vBuE",
+                            "lat": -6.8,
+                            "lng": 39.3,
+                        },
+                    }
+                )
+                continue
             # Example data: {"vehicle_id": "EL25G74vBuE", "lat": -6.8, "lng": 39.3}
             # Publish the data to Redis
             await redis_client.publish("vehicle_locations", json.dumps(data))
